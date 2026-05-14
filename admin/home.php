@@ -25,6 +25,12 @@
       </ol>
     </section>
 
+    <div class="text-right" style="margin-right: 15px; margin-bottom: 10px; margin-top: 10px;">
+      <a href="backup.php" class="btn btn-primary btn-flat">
+        <i class="fa fa-download"></i> Backup System
+      </a>
+    </div>
+
     <section class="content">
 
       <?php
