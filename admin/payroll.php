@@ -73,11 +73,9 @@
 
 <?php
 
-// DEDUCTIONS
-$deduction = $conn->query("SELECT SUM(amount) as total_amount FROM deductions")
+$deduction = $conn->query("SELECT SUM(amount) as total_amount FROM deductions WHERE status=1")
                   ->fetch_assoc()['total_amount'] ?? 0;
 
-// DATE RANGE
 $to = date('Y-m-d');
 $from = date('Y-m-d', strtotime('-30 day', strtotime($to)));
 
@@ -87,9 +85,6 @@ if(isset($_GET['range'])){
   $to = date('Y-m-d', strtotime($ex[1]));
 }
 
-/*
-| ATTENDANCE
-*/
 $sql = "SELECT attendance.*,
                employees.id AS empid,
                employees.employee_id AS emp_code,
@@ -113,14 +108,13 @@ while($row = $query->fetch_assoc()){
     $employees[$empid] = [
       'firstname' => $row['firstname'],
       'lastname' => $row['lastname'],
-      'emp_code' => $row['emp_code'], // used for deductions
+      'emp_code' => $row['emp_code'],
       'rate' => $row['rate'],
       'total_hr' => 0
     ];
   }
 
   $hours = $row['num_hr'];
-
   $day = date('l', strtotime($row['date']));
 
   if($day == 'Saturday'){
@@ -131,25 +125,16 @@ while($row = $query->fetch_assoc()){
   $employees[$empid]['total_hr'] += $hours;
 }
 
-/*
-| PAYROLL COMPUTATION
-*/
 foreach($employees as $empid => $emp){
 
   $id = $empid;
 
-  /*
-  | CASH ADVANCE 
-  */
   $ca = $conn->query("SELECT SUM(amount) as cashamount
                       FROM cashadvance
                       WHERE employee_id='$id'
                       AND date_advance BETWEEN '$from' AND '$to'")
                       ->fetch_assoc()['cashamount'] ?? 0;
 
-  /*
-  | PERSONAL DEDUCTION (USES employee_code 23)
-  */
   $emp_code = $emp['emp_code'];
 
   $pd = $conn->query("SELECT SUM(amount) as pdamount
@@ -157,33 +142,18 @@ foreach($employees as $empid => $emp){
                       WHERE employee_id='$emp_code'")
                       ->fetch_assoc()['pdamount'] ?? 0;
 
-  /*
-  | REGULAR PAY (THIS IS WHY YOU GOT 800 — THIS IS CORRECT BASE)
-  */
   $regular = $emp['rate'] * $emp['total_hr'];
 
-  /*
-  | OVERTIME (MUST USE ID 5 — THIS FIXES YOUR MISSING +200)
-  */
   $ot = $conn->query("SELECT SUM(hours * rate) as total_ot
                       FROM overtime
                       WHERE employee_id='$id'
                       AND date_overtime BETWEEN '$from' AND '$to'")
                       ->fetch_assoc()['total_ot'] ?? 0;
 
-  /*
-  | GROSS
-  */
   $gross = $regular + $ot;
 
-  /*
-  | TOTAL DEDUCTIONS
-  */
   $total_deduction = $deduction + $pd + $ca;
 
-  /*
-  | NET
-  */
   $net = $gross - $total_deduction;
 
   echo "

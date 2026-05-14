@@ -59,15 +59,16 @@ CREATE TABLE `cashadvance` (
 CREATE TABLE `deductions` (
   `id` int(11) NOT NULL,
   `description` varchar(100) NOT NULL,
-  `amount` double NOT NULL
+  `amount` double NOT NULL,
+  `status` TINYINT(1) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 INSERT INTO `deductions`
-(`id`, `description`, `amount`)
+(`id`, `description`, `amount`, `status`)
 VALUES
-(1, 'SSS', 100),
-(2, 'Pagibig', 150),
-(3, 'PhilHealth', 150);
+(1, 'SSS', 100, 1),
+(2, 'Pagibig', 150, 1),
+(3, 'PhilHealth', 150, 1);
 
 -- --------------------------------------------------------
 -- TABLE: personal_deductions
@@ -176,32 +177,15 @@ VALUES
 -- PRIMARY KEYS
 -- --------------------------------------------------------
 
-ALTER TABLE `admin`
-  ADD PRIMARY KEY (`id`);
-
-ALTER TABLE `attendance`
-  ADD PRIMARY KEY (`id`);
-
-ALTER TABLE `cashadvance`
-  ADD PRIMARY KEY (`id`);
-
-ALTER TABLE `deductions`
-  ADD PRIMARY KEY (`id`);
-
-ALTER TABLE `personal_deductions`
-  ADD PRIMARY KEY (`id`);
-
-ALTER TABLE `employees`
-  ADD PRIMARY KEY (`id`);
-
-ALTER TABLE `overtime`
-  ADD PRIMARY KEY (`id`);
-
-ALTER TABLE `position`
-  ADD PRIMARY KEY (`id`);
-
-ALTER TABLE `schedules`
-  ADD PRIMARY KEY (`id`);
+ALTER TABLE `admin` ADD PRIMARY KEY (`id`);
+ALTER TABLE `attendance` ADD PRIMARY KEY (`id`);
+ALTER TABLE `cashadvance` ADD PRIMARY KEY (`id`);
+ALTER TABLE `deductions` ADD PRIMARY KEY (`id`);
+ALTER TABLE `personal_deductions` ADD PRIMARY KEY (`id`);
+ALTER TABLE `employees` ADD PRIMARY KEY (`id`);
+ALTER TABLE `overtime` ADD PRIMARY KEY (`id`);
+ALTER TABLE `position` ADD PRIMARY KEY (`id`);
+ALTER TABLE `schedules` ADD PRIMARY KEY (`id`);
 
 -- --------------------------------------------------------
 -- AUTO_INCREMENT
