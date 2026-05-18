@@ -65,7 +65,6 @@
   <th>Employee ID</th>
   <th>Gross</th>
   <th>Deductions</th>
-  <th>Cash Advance</th>
   <th>Net Pay</th>
 </thead>
 
@@ -168,7 +167,6 @@ foreach($employees as $empid => $emp){
       <td>".$emp['emp_code']."</td>
       <td>".number_format($gross,2)."</td>
       <td>".number_format($total_deduction,2)."</td>
-      <td>".number_format($ca,2)."</td>
       <td>".number_format($net,2)."</td>
     </tr>
   ";
