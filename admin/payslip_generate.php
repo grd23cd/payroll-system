@@ -10,11 +10,14 @@ $to = date('Y-m-d', strtotime($ex[1]));
 $from_title = date('M d, Y', strtotime($ex[0]));
 $to_title = date('M d, Y', strtotime($ex[1]));
 
-// Global deductions
-$deduction = $conn->query("
-    SELECT SUM(amount) as total_amount 
-    FROM deductions
-")->fetch_assoc()['total_amount'] ?? 0;
+// Global deductions - fetch full breakdown
+$deductions_query = $conn->query("SELECT description, amount FROM deductions");
+$global_deductions = [];
+$deduction = 0;
+while ($ded_row = $deductions_query->fetch_assoc()) {
+    $global_deductions[] = $ded_row;
+    $deduction += $ded_row['amount'];
+}
 
 require_once('../tcpdf/tcpdf.php');
 
@@ -309,20 +312,25 @@ foreach($employees as $empid => $emp){
             <tr>
                 <td colspan="4"><br></td>
             </tr>
+    ';
 
+    // Global deductions breakdown
+    foreach($global_deductions as $ded){
+        $contents .= '
             <tr>
                 <td></td>
                 <td></td>
 
                 <td width="25%" align="right">
-                    Global Deduction:
+                    '.$ded['description'].':
                 </td>
 
                 <td width="25%" align="right">
-                    '.number_format($deduction, 2).'
+                    '.number_format($ded['amount'], 2).'
                 </td>
             </tr>
-    ';
+        ';
+    }
 
     // Personal deductions
     if(!empty($personal_deductions)){
