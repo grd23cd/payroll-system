@@ -71,48 +71,46 @@
 
 <tbody>
 
-  <?php
+<?php
 
-  $deduction = $conn->query("SELECT SUM(amount) as total_amount 
-                            FROM deductions 
-                            WHERE status=1")
+$deduction = $conn->query("SELECT SUM(amount) as total_amount FROM deductions WHERE status=1")
                   ->fetch_assoc()['total_amount'] ?? 0;
 
-  $to = date('Y-m-d');
-  $from = date('Y-m-d', strtotime('-30 day', strtotime($to)));
+$to = date('Y-m-d');
+$from = date('Y-m-d', strtotime('-30 day', strtotime($to)));
 
-  if(isset($_GET['range'])){
+if(isset($_GET['range'])){
   $ex = explode(' - ', $_GET['range']);
   $from = date('Y-m-d', strtotime($ex[0]));
   $to = date('Y-m-d', strtotime($ex[1]));
-  }
+}
 
-  $sql = "SELECT attendance.*,
-                employees.id AS empid,
-                employees.employee_id AS emp_code,
-                employees.firstname,
-                employees.lastname,
-                position.rate
+$sql = "SELECT attendance.*,
+               employees.id AS empid,
+               employees.employee_id AS emp_code,
+               employees.firstname,
+               employees.lastname,
+               position.rate
         FROM attendance
         LEFT JOIN employees ON employees.id = attendance.employee_id
         LEFT JOIN position ON position.id = employees.position_id
         WHERE attendance.date BETWEEN '$from' AND '$to'";
 
-  $query = $conn->query($sql);
+$query = $conn->query($sql);
 
-  $employees = [];
+$employees = [];
 
-  while($row = $query->fetch_assoc()){
+while($row = $query->fetch_assoc()){
 
   $empid = $row['empid'];
 
   if(!isset($employees[$empid])){
     $employees[$empid] = [
       'firstname' => $row['firstname'],
-      'lastname'  => $row['lastname'],
-      'emp_code'  => $row['emp_code'],
-      'rate'      => $row['rate'],
-      'total_hr'  => 0
+      'lastname' => $row['lastname'],
+      'emp_code' => $row['emp_code'],
+      'rate' => $row['rate'],
+      'total_hr' => 0
     ];
   }
 
@@ -125,43 +123,34 @@
   }
 
   $employees[$empid]['total_hr'] += $hours;
-  }
+}
 
-  foreach($employees as $empid => $emp){
+foreach($employees as $empid => $emp){
 
-  $emp_code = $emp['emp_code'];
+  $id = $empid;
 
-  // Cash Advance (uses employees.id ✔)
   $ca = $conn->query("SELECT SUM(amount) as cashamount
                       FROM cashadvance
-                      WHERE employee_id='$empid'
+                      WHERE employee_id='$id'
                       AND date_advance BETWEEN '$from' AND '$to'")
                       ->fetch_assoc()['cashamount'] ?? 0;
 
-  // Personal Deductions (FIXED → now uses employees.id ✔)
+  $emp_code = $emp['emp_code'];
+
   $pd = $conn->query("SELECT SUM(amount) as pdamount
                       FROM personal_deductions
-                      WHERE employee_id='$empid'")
+                      WHERE employee_id='$emp_code'")
                       ->fetch_assoc()['pdamount'] ?? 0;
 
-  // Regular pay
   $regular = $emp['rate'] * $emp['total_hr'];
 
-  // OVERTIME (FIXED → consistent employee_id ✔)
   $ot = $conn->query("SELECT SUM(hours * rate) as total_ot
                       FROM overtime
-                      WHERE employee_id='$empid'
+                      WHERE employee_id='$id'
                       AND date_overtime BETWEEN '$from' AND '$to'")
                       ->fetch_assoc()['total_ot'] ?? 0;
 
-  // Holiday pay
-  $holiday_pay = $conn->query("SELECT SUM(hours * rate * (percentage / 100)) as total_holiday
-                                FROM holiday_pay
-                                WHERE employee_id='$empid'
-                                AND date_holiday BETWEEN '$from' AND '$to'")
-                                ->fetch_assoc()['total_holiday'] ?? 0;
-
-  $gross = $regular + $ot + $holiday_pay;
+  $gross = $regular + $ot;
 
   $total_deduction = $deduction + $pd + $ca;
 
@@ -177,9 +166,9 @@
       <td>".number_format($net,2)."</td>
     </tr>
   ";
-  }
+}
 
-  ?>
+?>
 
 </tbody>
 </table>
