@@ -142,12 +142,26 @@ $pdf->SetAutoPageBreak(TRUE, 10);
 $pdf->SetFont('helvetica', '', 11);
 $pdf->AddPage();
 
-$content = '';
+// Logo path
+$logo = dirname(__FILE__) . '/../images/logo.jpg';
 
-$content .= '
-<h2 align="center">TechSoft IT Solutions</h2>
-<h4 align="center">'.$from_title." - ".$to_title.'</h4>
+// LOGO - top-left, absolute position
+if(file_exists($logo)){
+    $pdf->Image($logo, 10, 10, 25, 25);
+}
 
+// TITLE - full page width from X=0 so 'C' centers across entire page
+$pdf->SetXY(0, 15);
+$pdf->SetFont('helvetica', 'B', 14);
+$pdf->MultiCell(210, 8, 'San Luis Development Cooperative', 0, 'C', false, 1);
+$pdf->SetX(0);
+$pdf->SetFont('helvetica', '', 11);
+$pdf->MultiCell(210, 6, $from_title.' - '.$to_title, 0, 'C', false, 1);
+
+// Move below header before table
+$pdf->SetY(40);
+
+$content = '
 <table border="1" cellspacing="0" cellpadding="3">
 <tr>
     <th width="40%" align="center"><b>Employee Name</b></th>
