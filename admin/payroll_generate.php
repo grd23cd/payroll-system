@@ -84,8 +84,15 @@ function generateRow($from, $to, $conn){
                             AND date_overtime BETWEEN '$from' AND '$to'")
                             ->fetch_assoc()['total_ot'] ?? 0;
 
+        // Holiday pay
+        $holiday_pay = $conn->query("SELECT SUM(hours * rate * (percentage / 100)) as total_holiday
+                                    FROM holiday_pay
+                                    WHERE employee_id='$empid'
+                                    AND date_holiday BETWEEN '$from' AND '$to'")
+                                    ->fetch_assoc()['total_holiday'] ?? 0;
+
         // Gross
-        $gross = $regular + $ot;
+        $gross = $regular + $ot + $holiday_pay;
 
         // Total deductions
         $total_deduction = $deduction + $pd + $ca;

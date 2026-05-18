@@ -1,99 +1,99 @@
--- phpMyAdmin SQL Dump
--- version 4.7.9
--- https://www.phpmyadmin.net/
+-- MariaDB dump 10.19  Distrib 10.4.32-MariaDB, for Win64 (AMD64)
+--
+-- Host: localhost    Database: payroll
+-- ------------------------------------------------------
+-- Server version	10.4.32-MariaDB
 
-SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
-SET AUTOCOMMIT = 0;
-START TRANSACTION;
-SET time_zone = "+00:00";
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8mb4 */;
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
--- --------------------------------------------------------
--- TABLE: admin
--- --------------------------------------------------------
+--
+-- Table structure for table `admin`
+--
 
+DROP TABLE IF EXISTS `admin`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `admin` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `username` varchar(30) NOT NULL,
   `password` varchar(60) NOT NULL,
   `firstname` varchar(50) NOT NULL,
   `lastname` varchar(50) NOT NULL,
   `photo` varchar(200) NOT NULL,
-  `created_on` date NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+  `created_on` date NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
-INSERT INTO `admin`
-(`id`, `username`, `password`, `firstname`, `lastname`, `photo`, `created_on`)
-VALUES
-(1, 'nurhodelta', '$2y$10$fCOiMky4n5hCJx3cpsG20Od4wHtlkCLKmO6VLobJNRIg9ooHTkgjK',
-'Neovic', 'Devierte', 'facebook-profile-image.jpeg', '2018-04-30');
+--
+-- Table structure for table `attendance`
+--
 
--- --------------------------------------------------------
--- TABLE: attendance
--- --------------------------------------------------------
-
+DROP TABLE IF EXISTS `attendance`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `attendance` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `employee_id` int(11) NOT NULL,
   `date` date NOT NULL,
   `time_in` time NOT NULL,
   `status` int(1) NOT NULL,
   `time_out` time NOT NULL,
-  `num_hr` double NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+  `num_hr` double NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
--- --------------------------------------------------------
--- TABLE: cashadvance
--- --------------------------------------------------------
+--
+-- Table structure for table `cashadvance`
+--
 
+DROP TABLE IF EXISTS `cashadvance`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `cashadvance` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `date_advance` date NOT NULL,
   `employee_id` varchar(15) NOT NULL,
-  `amount` double NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+  `amount` double NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
--- --------------------------------------------------------
--- TABLE: deductions
--- --------------------------------------------------------
+--
+-- Table structure for table `deductions`
+--
 
+DROP TABLE IF EXISTS `deductions`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `deductions` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `description` varchar(100) NOT NULL,
   `amount` double NOT NULL,
-  `status` TINYINT(1) NOT NULL DEFAULT 1
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+  `status` tinyint(1) NOT NULL DEFAULT 1,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
-INSERT INTO `deductions`
-(`id`, `description`, `amount`, `status`)
-VALUES
-(1, 'SSS', 100, 1),
-(2, 'Pagibig', 150, 1),
-(3, 'PhilHealth', 150, 1);
+--
+-- Table structure for table `employees`
+--
 
--- --------------------------------------------------------
--- TABLE: personal_deductions
--- --------------------------------------------------------
-
-CREATE TABLE `personal_deductions` (
-  `id` int(11) NOT NULL,
-  `employee_id` varchar(15) NOT NULL,
-  `description` varchar(100) NOT NULL,
-  `amount` double NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
-
-INSERT INTO `personal_deductions`
-(`id`, `employee_id`, `description`, `amount`)
-VALUES
-(1, 'ABC123456789', 'Laptop Loan', 500),
-(2, 'ABC123456789', 'Uniform', 300),
-(3, 'JIE625973480', 'Cash Shortage', 200);
-
--- --------------------------------------------------------
--- TABLE: employees
--- --------------------------------------------------------
-
+DROP TABLE IF EXISTS `employees`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `employees` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `employee_id` varchar(15) NOT NULL,
   `firstname` varchar(50) NOT NULL,
   `lastname` varchar(50) NOT NULL,
@@ -104,118 +104,100 @@ CREATE TABLE `employees` (
   `position_id` int(11) NOT NULL,
   `schedule_id` int(11) NOT NULL,
   `photo` varchar(200) NOT NULL,
-  `created_on` date NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+  `created_on` date NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
-INSERT INTO `employees`
-(`id`, `employee_id`, `firstname`, `lastname`, `address`,
-`birthdate`, `contact_info`, `gender`, `position_id`,
-`schedule_id`, `photo`, `created_on`)
-VALUES
-(1, 'ABC123456789', 'Neovic', 'Devierte',
-'Brgy. Mambulac, Silay City',
-'2018-04-02', '09092735719', 'Male',
-1, 2, 'desktop.jpg', '2018-04-28'),
+--
+-- Table structure for table `holiday_pay`
+--
 
-(3, 'DYE473869250', 'Julyn', 'Divinagracia',
-'E.B. Magalona',
-'1992-05-02', '09123456789', 'Female',
-2, 2, '', '2018-04-30'),
+DROP TABLE IF EXISTS `holiday_pay`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `holiday_pay` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `employee_id` int(11) NOT NULL,
+  `date_holiday` date NOT NULL,
+  `type` varchar(50) NOT NULL,
+  `hours` double NOT NULL,
+  `rate` double NOT NULL,
+  `percentage` double NOT NULL DEFAULT 0,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
-(4, 'JIE625973480', 'Gemalyn', 'Cepe',
-'Carmen, Bohol',
-'1995-10-02', '09468029840', 'Female',
-2, 3, '', '2018-04-30');
+--
+-- Table structure for table `overtime`
+--
 
--- --------------------------------------------------------
--- TABLE: overtime
--- --------------------------------------------------------
-
+DROP TABLE IF EXISTS `overtime`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `overtime` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `employee_id` varchar(15) NOT NULL,
   `hours` double NOT NULL,
   `rate` double NOT NULL,
-  `date_overtime` date NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+  `date_overtime` date NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
--- --------------------------------------------------------
--- TABLE: position
--- --------------------------------------------------------
+--
+-- Table structure for table `personal_deductions`
+--
 
+DROP TABLE IF EXISTS `personal_deductions`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `personal_deductions` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `employee_id` varchar(15) NOT NULL,
+  `description` varchar(100) NOT NULL,
+  `amount` double NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `position`
+--
+
+DROP TABLE IF EXISTS `position`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `position` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `description` varchar(150) NOT NULL,
-  `rate` double NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+  `rate` double NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
-INSERT INTO `position`
-(`id`, `description`, `rate`)
-VALUES
-(1, 'Programmer', 100),
-(2, 'Writer', 50);
+--
+-- Table structure for table `schedules`
+--
 
--- --------------------------------------------------------
--- TABLE: schedules
--- --------------------------------------------------------
-
+DROP TABLE IF EXISTS `schedules`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `schedules` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `time_in` time NOT NULL,
-  `time_out` time NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+  `time_out` time NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
-INSERT INTO `schedules`
-(`id`, `time_in`, `time_out`)
-VALUES
-(1, '07:00:00', '16:00:00'),
-(2, '08:00:00', '17:00:00'),
-(3, '09:00:00', '18:00:00'),
-(4, '10:00:00', '19:00:00');
+/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- --------------------------------------------------------
--- PRIMARY KEYS
--- --------------------------------------------------------
-
-ALTER TABLE `admin` ADD PRIMARY KEY (`id`);
-ALTER TABLE `attendance` ADD PRIMARY KEY (`id`);
-ALTER TABLE `cashadvance` ADD PRIMARY KEY (`id`);
-ALTER TABLE `deductions` ADD PRIMARY KEY (`id`);
-ALTER TABLE `personal_deductions` ADD PRIMARY KEY (`id`);
-ALTER TABLE `employees` ADD PRIMARY KEY (`id`);
-ALTER TABLE `overtime` ADD PRIMARY KEY (`id`);
-ALTER TABLE `position` ADD PRIMARY KEY (`id`);
-ALTER TABLE `schedules` ADD PRIMARY KEY (`id`);
-
--- --------------------------------------------------------
--- AUTO_INCREMENT
--- --------------------------------------------------------
-
-ALTER TABLE `admin`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
-
-ALTER TABLE `attendance`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
-ALTER TABLE `cashadvance`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
-ALTER TABLE `deductions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
-
-ALTER TABLE `personal_deductions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
-
-ALTER TABLE `employees`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
-
-ALTER TABLE `overtime`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
-ALTER TABLE `position`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
-
-ALTER TABLE `schedules`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
-
-COMMIT;
+-- Dump completed on 2026-05-18 11:56:08

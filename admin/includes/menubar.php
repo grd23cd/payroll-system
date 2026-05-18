@@ -1,4 +1,4 @@
-<aside class="main-sidebar">
+    <aside class="main-sidebar">
     <!-- sidebar: style can be found in sidebar.less -->
     <section class="sidebar">
       <!-- Sidebar user panel -->
@@ -29,6 +29,7 @@
           <ul class="treeview-menu">
             <li><a href="employee.php"><i class="fa fa-circle-o"></i> Employee List</a></li>
             <li><a href="overtime.php"><i class="fa fa-circle-o"></i> Overtime</a></li>
+            <li><a href="holiday_pay.php"><i class="fa fa-circle-o"></i> Holiday Pay</a></li>
             <li><a href="cashadvance.php"><i class="fa fa-circle-o"></i> Cash Advance</a></li>
             <li><a href="schedule.php"><i class="fa fa-circle-o"></i> Schedules</a></li>
           </ul>

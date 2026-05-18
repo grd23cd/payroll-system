@@ -102,13 +102,12 @@ foreach($employees as $empid => $emp){
     // NEW PAGE FOR EACH EMPLOYEE
     $pdf->AddPage();
 
-    // LOGO - top-left, absolute position (x=10, y=10, 25x25mm)
+    // LOGO
     if(file_exists($logo)){
         $pdf->Image($logo, 10, 10, 25, 25);
     }
 
-    // TITLE - starts from X=0, full page width (210mm), so 'C' centers across the whole page
-    // This makes it truly centered regardless of the logo on the left
+    // TITLE
     $pdf->SetXY(0, 15);
     $pdf->SetFont('helvetica', 'B', 14);
     $pdf->MultiCell(210, 8, 'San Luis Development Cooperative', 0, 'C', false, 1);
@@ -116,7 +115,6 @@ foreach($employees as $empid => $emp){
     $pdf->SetFont('helvetica', '', 11);
     $pdf->MultiCell(210, 6, $from_title.' - '.$to_title, 0, 'C', false, 1);
 
-    // Move below header before employee details
     $pdf->SetY(40);
 
     $emp_code = $emp['emp_code'];
@@ -165,10 +163,32 @@ foreach($employees as $empid => $emp){
         $ot_total += $ot_row['ot_amount'];
     }
 
+    // Holiday Pay
+    $hp_query = $conn->query("
+        SELECT date_holiday,
+               type,
+               hours,
+               rate,
+               percentage,
+               (hours * rate * (percentage / 100)) AS hp_amount
+        FROM holiday_pay
+        WHERE employee_id = '$empid'
+        AND date_holiday BETWEEN '$from' AND '$to'
+    ");
+
+    $holidays = [];
+    $hp_total = 0;
+
+    while($hp_row = $hp_query->fetch_assoc()){
+
+        $holidays[] = $hp_row;
+        $hp_total += $hp_row['hp_amount'];
+    }
+
     // Computations
     $regular = $emp['rate'] * $emp['total_hr'];
 
-    $gross = $regular + $ot_total;
+    $gross = $regular + $ot_total + $hp_total;
 
     $total_deduction = $deduction + $pd_total + $ca;
 
@@ -244,6 +264,28 @@ foreach($employees as $empid => $emp){
 
                     <td width="25%" align="right">
                         '.number_format($ot['ot_amount'], 2).'
+                    </td>
+                </tr>
+            ';
+        }
+    }
+
+    // Holiday pay rows
+    if(!empty($holidays)){
+
+        foreach($holidays as $hp){
+
+            $contents .= '
+                <tr>
+                    <td></td>
+                    <td></td>
+
+                    <td width="25%" align="right">
+                        Holiday ('.date('M d', strtotime($hp['date_holiday'])).' / '.$hp['type'].' / '.$hp['percentage'].'%):
+                    </td>
+
+                    <td width="25%" align="right">
+                        '.number_format($hp['hp_amount'], 2).'
                     </td>
                 </tr>
             ';
