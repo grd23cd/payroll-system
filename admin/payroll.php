@@ -150,7 +150,13 @@ foreach($employees as $empid => $emp){
                       AND date_overtime BETWEEN '$from' AND '$to'")
                       ->fetch_assoc()['total_ot'] ?? 0;
 
-  $gross = $regular + $ot;
+  $holiday_pay = $conn->query("SELECT SUM(hours * rate * (percentage / 100)) as total_holiday
+                                FROM holiday_pay
+                                WHERE employee_id='$id'
+                                AND date_holiday BETWEEN '$from' AND '$to'")
+                                ->fetch_assoc()['total_holiday'] ?? 0;
+
+  $gross = $regular + $ot + $holiday_pay;
 
   $total_deduction = $deduction + $pd + $ca;
 
