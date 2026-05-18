@@ -34,7 +34,6 @@ $pdf->SetAutoPageBreak(TRUE, 10);
 
 $pdf->SetFont('helvetica', '', 11);
 
-// Logo path
 $logo = dirname(__FILE__) . '/../images/logo.jpg';
 
 // Get attendance grouped per employee
@@ -46,10 +45,8 @@ $sql = "
            employees.lastname,
            position.rate
     FROM attendance
-    LEFT JOIN employees 
-        ON employees.id = attendance.employee_id
-    LEFT JOIN position 
-        ON position.id = employees.position_id
+    LEFT JOIN employees ON employees.id = attendance.employee_id
+    LEFT JOIN position ON position.id = employees.position_id
     WHERE attendance.date BETWEEN '$from' AND '$to'
     ORDER BY employees.lastname ASC, employees.firstname ASC
 ";
@@ -63,7 +60,6 @@ while($row = $query->fetch_assoc()){
     $empid = $row['empid'];
 
     if(!isset($employees[$empid])){
-
         $employees[$empid] = [
             'firstname' => $row['firstname'],
             'lastname'  => $row['lastname'],
@@ -74,14 +70,10 @@ while($row = $query->fetch_assoc()){
     }
 
     $hours = $row['num_hr'];
-
     $day = date('l', strtotime($row['date']));
 
-    // Saturday conversion
     if($day == 'Saturday'){
-
         $hours = ($hours / 3) * 8;
-
         if($hours > 8){
             $hours = 8;
         }
@@ -90,31 +82,23 @@ while($row = $query->fetch_assoc()){
     $employees[$empid]['total_hr'] += $hours;
 }
 
-// Sort employees
 uasort($employees, function($a, $b){
-
     $cmp = strcmp($a['lastname'], $b['lastname']);
-
-    return ($cmp !== 0)
-        ? $cmp
-        : strcmp($a['firstname'], $b['firstname']);
+    return ($cmp !== 0) ? $cmp : strcmp($a['firstname'], $b['firstname']);
 });
 
 foreach($employees as $empid => $emp){
 
-    // NEW PAGE FOR EACH EMPLOYEE
     $pdf->AddPage();
 
-    // LOGO
     if(file_exists($logo)){
         $pdf->Image($logo, 10, 10, 25, 25);
     }
 
-    // TITLE
     $pdf->SetXY(0, 15);
     $pdf->SetFont('helvetica', 'B', 14);
     $pdf->MultiCell(210, 8, 'San Luis Development Cooperative', 0, 'C', false, 1);
-    $pdf->SetX(0);
+
     $pdf->SetFont('helvetica', '', 11);
     $pdf->MultiCell(210, 6, $from_title.' - '.$to_title, 0, 'C', false, 1);
 
@@ -130,6 +114,8 @@ foreach($employees as $empid => $emp){
         AND date_advance BETWEEN '$from' AND '$to'
     ")->fetch_assoc()['cashamount'] ?? 0;
 
+    $ca = (float)$ca;
+
     // Personal Deductions
     $pd_query = $conn->query("
         SELECT description, amount
@@ -141,16 +127,13 @@ foreach($employees as $empid => $emp){
     $pd_total = 0;
 
     while($pd_row = $pd_query->fetch_assoc()){
-
         $personal_deductions[] = $pd_row;
         $pd_total += $pd_row['amount'];
     }
 
     // Overtime
     $ot_query = $conn->query("
-        SELECT date_overtime,
-               hours,
-               rate,
+        SELECT date_overtime, hours, rate,
                (hours * rate) AS ot_amount
         FROM overtime
         WHERE employee_id = '$empid'
@@ -161,18 +144,13 @@ foreach($employees as $empid => $emp){
     $ot_total = 0;
 
     while($ot_row = $ot_query->fetch_assoc()){
-
         $overtimes[] = $ot_row;
         $ot_total += $ot_row['ot_amount'];
     }
 
     // Holiday Pay
     $hp_query = $conn->query("
-        SELECT date_holiday,
-               type,
-               hours,
-               rate,
-               percentage,
+        SELECT date_holiday, type, hours, rate, percentage,
                (hours * rate * (percentage / 100)) AS hp_amount
         FROM holiday_pay
         WHERE employee_id = '$empid'
@@ -183,88 +161,47 @@ foreach($employees as $empid => $emp){
     $hp_total = 0;
 
     while($hp_row = $hp_query->fetch_assoc()){
-
         $holidays[] = $hp_row;
         $hp_total += $hp_row['hp_amount'];
     }
 
-    // Computations
     $regular = $emp['rate'] * $emp['total_hr'];
-
     $gross = $regular + $ot_total + $hp_total;
-
     $total_deduction = $deduction + $pd_total + $ca;
-
     $net = $gross - $total_deduction;
 
-    // CONTENT
     $contents = '
         <table border="0" cellspacing="0" cellpadding="4">
 
-            <tr>
-                <td width="25%" align="right">
-                    Employee Name:
-                </td>
+        <tr>
+            <td width="25%" align="right">Employee Name:</td>
+            <td width="25%"><b>'.$emp['firstname'].' '.$emp['lastname'].'</b></td>
+            <td width="25%" align="right">Rate per Hour:</td>
+            <td width="25%" align="right">'.number_format($emp['rate'], 2).'</td>
+        </tr>
 
-                <td width="25%">
-                    <b>'.$emp['firstname'].' '.$emp['lastname'].'</b>
-                </td>
+        <tr>
+            <td width="25%" align="right">Employee ID:</td>
+            <td width="25%">'.$emp_code.'</td>
+            <td width="25%" align="right">Total Hours:</td>
+            <td width="25%" align="right">'.number_format($emp['total_hr'], 2).'</td>
+        </tr>
 
-                <td width="25%" align="right">
-                    Rate per Hour:
-                </td>
-
-                <td width="25%" align="right">
-                    '.number_format($emp['rate'], 2).'
-                </td>
-            </tr>
-
-            <tr>
-                <td width="25%" align="right">
-                    Employee ID:
-                </td>
-
-                <td width="25%">
-                    '.$emp_code.'
-                </td>
-
-                <td width="25%" align="right">
-                    Total Hours:
-                </td>
-
-                <td width="25%" align="right">
-                    '.number_format($emp['total_hr'], 2).'
-                </td>
-            </tr>
-
-            <tr>
-                <td></td>
-                <td></td>
-
-                <td width="25%" align="right">
-                    Regular Pay:
-                </td>
-
-                <td width="25%" align="right">
-                    '.number_format($regular, 2).'
-                </td>
-            </tr>
+        <tr>
+            <td></td><td></td>
+            <td width="25%" align="right">Regular Pay:</td>
+            <td width="25%" align="right">'.number_format($regular, 2).'</td>
+        </tr>
     ';
 
-    // Overtime rows
     if(!empty($overtimes)){
-
         foreach($overtimes as $ot){
-
             $contents .= '
                 <tr>
-                    <td></td>
-                    <td></td>
-
+                    <td></td><td></td>
                     <td width="25%" align="right">
                         OT ('.date('M d', strtotime($ot['date_overtime'])).' / '.$ot['hours'].'hrs):
                     </td>
-
                     <td width="25%" align="right">
                         '.number_format($ot['ot_amount'], 2).'
                     </td>
@@ -273,20 +210,14 @@ foreach($employees as $empid => $emp){
         }
     }
 
-    // Holiday pay rows
     if(!empty($holidays)){
-
         foreach($holidays as $hp){
-
             $contents .= '
                 <tr>
-                    <td></td>
-                    <td></td>
-
+                    <td></td><td></td>
                     <td width="25%" align="right">
                         Holiday ('.date('M d', strtotime($hp['date_holiday'])).' / '.$hp['type'].' / '.$hp['percentage'].'%):
                     </td>
-
                     <td width="25%" align="right">
                         '.number_format($hp['hp_amount'], 2).'
                     </td>
@@ -296,103 +227,57 @@ foreach($employees as $empid => $emp){
     }
 
     $contents .= '
-            <tr>
-                <td></td>
-                <td></td>
+        <tr>
+            <td></td><td></td>
+            <td width="25%" align="right"><b>Gross Pay:</b></td>
+            <td width="25%" align="right"><b>'.number_format($gross, 2).'</b></td>
+        </tr>
 
-                <td width="25%" align="right">
-                    <b>Gross Pay:</b>
-                </td>
-
-                <td width="25%" align="right">
-                    <b>'.number_format($gross, 2).'</b>
-                </td>
-            </tr>
-
-            <tr>
-                <td colspan="4"><br></td>
-            </tr>
+        <tr><td colspan="4"><br></td></tr>
     ';
 
-    // Global deductions breakdown
     foreach($global_deductions as $ded){
         $contents .= '
             <tr>
-                <td></td>
-                <td></td>
-
-                <td width="25%" align="right">
-                    '.$ded['description'].':
-                </td>
-
-                <td width="25%" align="right">
-                    '.number_format($ded['amount'], 2).'
-                </td>
+                <td></td><td></td>
+                <td width="25%" align="right">'.$ded['description'].':</td>
+                <td width="25%" align="right">'.number_format($ded['amount'], 2).'</td>
             </tr>
         ';
     }
 
-    // Personal deductions
-    if(!empty($personal_deductions)){
+    foreach($personal_deductions as $pd){
+        $contents .= '
+            <tr>
+                <td></td><td></td>
+                <td width="25%" align="right">'.$pd['description'].':</td>
+                <td width="25%" align="right">'.number_format($pd['amount'], 2).'</td>
+            </tr>
+        ';
+    }
 
-        foreach($personal_deductions as $pd){
-
-            $contents .= '
-                <tr>
-                    <td></td>
-                    <td></td>
-
-                    <td width="25%" align="right">
-                        '.$pd['description'].':
-                    </td>
-
-                    <td width="25%" align="right">
-                        '.number_format($pd['amount'], 2).'
-                    </td>
-                </tr>
-            ';
-        }
+    if($ca > 0){
+        $contents .= '
+            <tr>
+                <td></td><td></td>
+                <td width="25%" align="right">Cash Advance:</td>
+                <td width="25%" align="right">'.number_format($ca, 2).'</td>
+            </tr>
+        ';
     }
 
     $contents .= '
-            <tr>
-                <td></td>
-                <td></td>
+        <tr>
+            <td></td><td></td>
+            <td width="25%" align="right"><b>Total Deduction:</b></td>
+            <td width="25%" align="right"><b>'.number_format($total_deduction, 2).'</b></td>
+        </tr>
 
-                <td width="25%" align="right">
-                    Cash Advance:
-                </td>
-
-                <td width="25%" align="right">
-                    '.number_format($ca, 2).'
-                </td>
-            </tr>
-
-            <tr>
-                <td></td>
-                <td></td>
-
-                <td width="25%" align="right">
-                    <b>Total Deduction:</b>
-                </td>
-
-                <td width="25%" align="right">
-                    <b>'.number_format($total_deduction, 2).'</b>
-                </td>
-            </tr>
-
-            <tr>
-                <td></td>
-                <td></td>
-
-                <td width="25%" align="right">
-                    <b>Net Pay:</b>
-                </td>
-
-                <td width="25%" align="right">
-                    <b>'.number_format($net, 2).'</b>
-                </td>
-            </tr>
+        <tr>
+            <td></td><td></td>
+            <td width="25%" align="right"><b>Net Pay:</b></td>
+            <td width="25%" align="right"><b>'.number_format($net, 2).'</b></td>
+        </tr>
 
         </table>
     ';
@@ -400,12 +285,10 @@ foreach($employees as $empid => $emp){
     $pdf->writeHTML($contents, true, false, true, false, '');
 }
 
-// Clean output buffer
 if(ob_get_length()){
     ob_end_clean();
 }
 
-// Output PDF
 $pdf->Output('payslip.pdf', 'I');
 exit;
 ?>
