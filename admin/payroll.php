@@ -2,8 +2,8 @@
 <?php include '../timezone.php'; ?>
 
 <?php
-  $range_to = date('m/d/Y');
-  $range_from = date('m/d/Y', strtotime('-30 day', strtotime($range_to)));
+$range_to = date('m/d/Y');
+$range_from = date('m/d/Y', strtotime('-30 day', strtotime($range_to)));
 ?>
 
 <?php include 'includes/header.php'; ?>
@@ -18,11 +18,6 @@
 
 <section class="content-header">
   <h1>Payroll</h1>
-
-  <ol class="breadcrumb">
-    <li><a href="#"><i class="fa fa-dashboard"></i> Home</a></li>
-    <li class="active">Payroll</li>
-  </ol>
 </section>
 
 <section class="content">
@@ -47,8 +42,8 @@
          value="<?php echo (isset($_GET['range'])) ? $_GET['range'] : $range_from.' - '.$range_to; ?>">
 </div>
 
-<button type="button" class="btn btn-success btn-sm btn-flat" id="payroll"><span class="glyphicon glyphicon-print"></span> Payroll</button>
-<button type="button" class="btn btn-primary btn-sm btn-flat" id="payslip"><span class="glyphicon glyphicon-print"></span> Payslip</button>
+<button type="button" class="btn btn-success btn-sm btn-flat" id="payroll">Payroll</button>
+<button type="button" class="btn btn-primary btn-sm btn-flat" id="payslip">Payslip</button>
 
 </form>
 
@@ -59,7 +54,6 @@
 <div class="box-body">
 
 <table id="example1" class="table table-bordered">
-
 <thead>
   <th>Employee Name</th>
   <th>Employee ID</th>
@@ -72,8 +66,17 @@
 
 <?php
 
-$deduction = $conn->query("SELECT SUM(amount) as total_amount FROM deductions WHERE status=1")
+$deduction = $conn->query("SELECT SUM(amount) as total_amount FROM deductions")
                   ->fetch_assoc()['total_amount'] ?? 0;
+
+/* =========================
+   COLA (FIXED)
+========================= */
+$cola_q = $conn->query("SELECT amount, status FROM cola WHERE id=1");
+$cola_row = $cola_q->fetch_assoc();
+
+$cola_enabled = $cola_row['status'] ?? 0;
+$cola_amount = $cola_row['amount'] ?? 0;
 
 $to = date('Y-m-d');
 $from = date('Y-m-d', strtotime('-30 day', strtotime($to)));
@@ -105,11 +108,11 @@ while($row = $query->fetch_assoc()){
 
   if(!isset($employees[$empid])){
     $employees[$empid] = [
-      'firstname' => $row['firstname'],
-      'lastname' => $row['lastname'],
-      'emp_code' => $row['emp_code'],
-      'rate' => $row['rate'],
-      'total_hr' => 0
+      'firstname'=>$row['firstname'],
+      'lastname'=>$row['lastname'],
+      'emp_code'=>$row['emp_code'],
+      'rate'=>$row['rate'],
+      'total_hr'=>0
     ];
   }
 
@@ -124,47 +127,44 @@ while($row = $query->fetch_assoc()){
   $employees[$empid]['total_hr'] += $hours;
 }
 
-foreach($employees as $empid => $emp){
-
-  $id = $empid;
+foreach($employees as $empid=>$emp){
 
   $ca = $conn->query("SELECT SUM(amount) as cashamount
                       FROM cashadvance
-                      WHERE employee_id='$id'
+                      WHERE employee_id='$empid'
                       AND date_advance BETWEEN '$from' AND '$to'")
                       ->fetch_assoc()['cashamount'] ?? 0;
 
-  $emp_code = $emp['emp_code'];
-
   $pd = $conn->query("SELECT SUM(amount) as pdamount
                       FROM personal_deductions
-                      WHERE employee_id='$emp_code'")
+                      WHERE employee_id='".$emp['emp_code']."'")
                       ->fetch_assoc()['pdamount'] ?? 0;
 
   $regular = $emp['rate'] * $emp['total_hr'];
 
   $ot = $conn->query("SELECT SUM(hours * rate) as total_ot
                       FROM overtime
-                      WHERE employee_id='$id'
+                      WHERE employee_id='$empid'
                       AND date_overtime BETWEEN '$from' AND '$to'")
                       ->fetch_assoc()['total_ot'] ?? 0;
 
-  $holiday_pay = $conn->query("SELECT SUM(hours * rate * (percentage / 100)) as total_holiday
-                                FROM holiday_pay
-                                WHERE employee_id='$id'
-                                AND date_holiday BETWEEN '$from' AND '$to'")
-                                ->fetch_assoc()['total_holiday'] ?? 0;
+  $hp = $conn->query("SELECT SUM(hours * rate * (percentage / 100)) as total_holiday
+                      FROM holiday_pay
+                      WHERE employee_id='$empid'
+                      AND date_holiday BETWEEN '$from' AND '$to'")
+                      ->fetch_assoc()['total_holiday'] ?? 0;
 
-  $gross = $regular + $ot + $holiday_pay;
+  /* COLA */
+  $cola = ($cola_enabled == 1) ? $cola_amount : 0;
 
+  $gross = $regular + $ot + $hp + $cola;
   $total_deduction = $deduction + $pd + $ca;
-
   $net = $gross - $total_deduction;
 
   echo "
     <tr>
-      <td>".$emp['lastname'].", ".$emp['firstname']."</td>
-      <td>".$emp['emp_code']."</td>
+      <td>{$emp['lastname']}, {$emp['firstname']}</td>
+      <td>{$emp['emp_code']}</td>
       <td>".number_format($gross,2)."</td>
       <td>".number_format($total_deduction,2)."</td>
       <td>".number_format($net,2)."</td>
@@ -185,7 +185,6 @@ foreach($employees as $empid => $emp){
 </div>
 
 <?php include 'includes/footer.php'; ?>
-
 </div>
 
 <?php include 'includes/scripts.php'; ?>

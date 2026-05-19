@@ -6,11 +6,15 @@ function generateRow($from, $to, $conn){
     $contents = '';
     $total = 0;
 
-    // Global deductions
     $deduction = $conn->query("SELECT SUM(amount) as total_amount FROM deductions")
                       ->fetch_assoc()['total_amount'] ?? 0;
 
-    // Get all attendance in range
+    $cola_q = $conn->query("SELECT amount, status FROM cola WHERE id=1");
+    $cola = $cola_q->fetch_assoc();
+
+    $cola_enabled = $cola['status'] ?? 0;
+    $cola_amount = $cola['amount'] ?? 0;
+
     $sql = "SELECT attendance.*,
                    employees.id AS empid,
                    employees.employee_id AS emp_code,
@@ -41,7 +45,6 @@ function generateRow($from, $to, $conn){
         }
 
         $hours = $row['num_hr'];
-
         $day = date('l', strtotime($row['date']));
 
         if($day == 'Saturday'){
@@ -52,7 +55,6 @@ function generateRow($from, $to, $conn){
         $employees[$empid]['total_hr'] += $hours;
     }
 
-    // Sort by lastname ASC, firstname ASC
     uasort($employees, function($a, $b){
         $cmp = strcmp($a['lastname'], $b['lastname']);
         return ($cmp !== 0) ? $cmp : strcmp($a['firstname'], $b['firstname']);
@@ -60,44 +62,37 @@ function generateRow($from, $to, $conn){
 
     foreach($employees as $empid => $emp){
 
-        // Cash advance per employee
         $ca = $conn->query("SELECT SUM(amount) as cashamount
                             FROM cashadvance
                             WHERE employee_id='$empid'
                             AND date_advance BETWEEN '$from' AND '$to'")
                             ->fetch_assoc()['cashamount'] ?? 0;
 
-        // Personal deductions per employee
         $emp_code = $emp['emp_code'];
+
         $pd = $conn->query("SELECT SUM(amount) as pdamount
                             FROM personal_deductions
                             WHERE employee_id='$emp_code'")
                             ->fetch_assoc()['pdamount'] ?? 0;
 
-        // Regular pay
         $regular = $emp['rate'] * $emp['total_hr'];
 
-        // Overtime
         $ot = $conn->query("SELECT SUM(hours * rate) as total_ot
                             FROM overtime
                             WHERE employee_id='$empid'
                             AND date_overtime BETWEEN '$from' AND '$to'")
                             ->fetch_assoc()['total_ot'] ?? 0;
 
-        // Holiday pay
         $holiday_pay = $conn->query("SELECT SUM(hours * rate * (percentage / 100)) as total_holiday
                                     FROM holiday_pay
                                     WHERE employee_id='$empid'
                                     AND date_holiday BETWEEN '$from' AND '$to'")
                                     ->fetch_assoc()['total_holiday'] ?? 0;
 
-        // Gross
-        $gross = $regular + $ot + $holiday_pay;
+        $cola_value = ($cola_enabled == 1) ? $cola_amount : 0;
 
-        // Total deductions
+        $gross = $regular + $ot + $holiday_pay + $cola_value;
         $total_deduction = $deduction + $pd + $ca;
-
-        // Net
         $net = $gross - $total_deduction;
 
         $total += $net;
@@ -107,23 +102,18 @@ function generateRow($from, $to, $conn){
             <td>'.$emp['lastname'].', '.$emp['firstname'].'</td>
             <td>'.$emp['emp_code'].'</td>
             <td align="right">'.number_format($net, 2).'</td>
-        </tr>
-        ';
+        </tr>';
     }
 
     $contents .= '
         <tr>
             <td colspan="2" align="right"><b>Total</b></td>
             <td align="right"><b>'.number_format($total, 2).'</b></td>
-        </tr>
-    ';
+        </tr>';
 
     return $contents;
 }
 
-// =====================
-// DATE RANGE
-// =====================
 $range = $_POST['date_range'];
 $ex = explode(' - ', $range);
 
@@ -133,39 +123,39 @@ $to = date('Y-m-d', strtotime($ex[1]));
 $from_title = date('M d, Y', strtotime($ex[0]));
 $to_title = date('M d, Y', strtotime($ex[1]));
 
-// =====================
-// TCPDF
-// =====================
 require_once('../tcpdf/tcpdf.php');
 
 $pdf = new TCPDF('P', PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
 
 $pdf->SetCreator(PDF_CREATOR);
 $pdf->SetTitle('Payroll: '.$from_title.' - '.$to_title);
+
 $pdf->setPrintHeader(false);
 $pdf->setPrintFooter(false);
-$pdf->SetMargins(PDF_MARGIN_LEFT, '10', PDF_MARGIN_RIGHT);
+
+$pdf->SetMargins(PDF_MARGIN_LEFT, 10, PDF_MARGIN_RIGHT);
 $pdf->SetAutoPageBreak(TRUE, 10);
+
 $pdf->SetFont('helvetica', '', 11);
+
 $pdf->AddPage();
 
-// Logo path
 $logo = dirname(__FILE__) . '/../images/logo.jpg';
 
-// LOGO - top-left, absolute position
 if(file_exists($logo)){
-    $pdf->Image($logo, 10, 10, 25, 25);
+    $pdf->Image($logo, 35, 10, 25, 25);
 }
 
-// TITLE - full page width from X=0 so 'C' centers across entire page
-$pdf->SetXY(0, 15);
-$pdf->SetFont('helvetica', 'B', 14);
-$pdf->MultiCell(210, 8, 'San Luis Development Cooperative', 0, 'C', false, 1);
-$pdf->SetX(0);
-$pdf->SetFont('helvetica', '', 11);
-$pdf->MultiCell(210, 6, $from_title.' - '.$to_title, 0, 'C', false, 1);
+$pdf->SetY(15);
 
-// Move below header before table
+$w = $pdf->getPageWidth() - PDF_MARGIN_LEFT - PDF_MARGIN_RIGHT;
+
+$pdf->SetFont('helvetica', 'B', 14);
+$pdf->MultiCell($w, 8, 'San Luis Development Cooperative', 0, 'C', false, 1);
+
+$pdf->SetFont('helvetica', '', 11);
+$pdf->MultiCell($w, 6, $from_title.' - '.$to_title, 0, 'C', false, 1);
+
 $pdf->SetY(40);
 
 $content = '
@@ -178,9 +168,13 @@ $content = '
 ';
 
 $content .= generateRow($from, $to, $conn);
-
 $content .= '</table>';
 
 $pdf->writeHTML($content);
+
+if(ob_get_length()){
+    ob_end_clean();
+}
+
 $pdf->Output('payroll.pdf', 'I');
 ?>
