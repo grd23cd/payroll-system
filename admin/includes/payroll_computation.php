@@ -69,8 +69,9 @@ $query = $conn->query($sql);
    BUILD EMPLOYEE + DAILY STRUCTURE
 ========================================================= */
 
-$employees = [];
-$daily = [];
+$employees       = [];
+$daily           = [];
+$late_deductions = [];
 
 while($row = $query->fetch_assoc()){
 
@@ -78,7 +79,6 @@ while($row = $query->fetch_assoc()){
     $date  = $row['date'];
 
     if(!isset($employees[$empid])){
-
         $employees[$empid] = [
             'firstname' => $row['firstname'],
             'lastname'  => $row['lastname'],
@@ -88,11 +88,59 @@ while($row = $query->fetch_assoc()){
         ];
     }
 
+    /* =========================================================
+       COMPUTE HOURS FROM time_in / time_out
+       (ignore num_hr to avoid double deduction)
+    ========================================================= */
+
+    $hours = 0;
+
+    if(!empty($row['time_in']) && !empty($row['time_out'])){
+        $time_out = strtotime($row['time_out']);
+        $time_in  = strtotime($row['time_in']);
+
+        $hours = ($time_out - $time_in) / 3600;
+
+        if($hours < 0){
+            $hours = 0;
+        }
+    }
+
+    /* =========================================================
+       GRACE PERIOD + LATE PENALTY
+       Store penalty separately — applied after cap
+    ========================================================= */
+
+    $standard_time = '08:00:00';
+    $grace_minutes = 15;
+
+    if(!isset($late_deductions[$empid][$date])){
+        $late_deductions[$empid][$date] = 0;
+    }
+
+    if(!empty($row['time_in'])){
+
+        $time_in = strtotime($row['time_in']);
+        $start   = strtotime($standard_time);
+
+        if($time_in > $start){
+
+            $late_minutes = floor(($time_in - $start) / 60);
+
+            if($late_minutes > $grace_minutes){
+
+                $penalty_minutes = $late_minutes - $grace_minutes;
+
+                $late_deductions[$empid][$date] += ($penalty_minutes / 60);
+            }
+        }
+    }
+
     if(!isset($daily[$empid][$date])){
         $daily[$empid][$date] = 0;
     }
 
-    $daily[$empid][$date] += (float)$row['num_hr'];
+    $daily[$empid][$date] += $hours;
 }
 
 /* =========================================================
@@ -112,33 +160,41 @@ foreach($employees as $empid => $emp){
         $date = $dateObj->format('Y-m-d');
         $day  = $dateObj->format('l');
 
-        $hours = $daily[$empid][$date] ?? 0;
+        $hours    = $daily[$empid][$date] ?? 0;
+        $late_ded = $late_deductions[$empid][$date] ?? 0;
 
-        /* SUNDAY RULE */
+        /* SUNDAY RULE — no late penalty */
         if($day === 'Sunday'){
-            $hours = 8;
+            $hours    = 8;
+            $late_ded = 0;
         }
 
-        /* CAP */
+        /* CAP before late penalty */
         if($hours > 8){
             $hours = 8;
         }
 
-        /* SATURDAY RULE */
+        /* SATURDAY RULE — no late penalty */
         if($day === 'Saturday'){
 
             if($hours > 0 && $hours <= 3){
-
                 $hours = 8;
-
             } else {
-
                 $hours = ($hours / 3) * 8;
 
                 if($hours > 8){
                     $hours = 8;
                 }
             }
+
+            $late_ded = 0;
+        }
+
+        /* APPLY LATE PENALTY AFTER CAP */
+        $hours -= $late_ded;
+
+        if($hours < 0){
+            $hours = 0;
         }
 
         $employees[$empid]['total_hr'] += $hours;
@@ -168,11 +224,7 @@ foreach($employees as $empid => $emp){
 
     $emp_code = $emp['emp_code'];
 
-    /* REGULAR */
-
     $regular = $emp['rate'] * $emp['total_hr'];
-
-    /* OVERTIME */
 
     $ot = (float)(
         $conn->query("
@@ -183,19 +235,14 @@ foreach($employees as $empid => $emp){
         ")->fetch_assoc()['total'] ?? 0
     );
 
-    /* HOLIDAY PAY */
-
     $hp = (float)(
         $conn->query("
             SELECT SUM(
                 hours * rate *
                 (
                     CASE
-                        /* BELOW 100 = DIRECT EXTRA % */
                         WHEN percentage < 100
                             THEN (percentage / 100)
-
-                        /* 100 OR HIGHER = ONLY EXCESS ABOVE 100 */
                         ELSE ((percentage - 100) / 100)
                     END
                 )
@@ -206,8 +253,6 @@ foreach($employees as $empid => $emp){
         ")->fetch_assoc()['total'] ?? 0
     );
 
-    /* CASH ADVANCE */
-
     $ca = (float)(
         $conn->query("
             SELECT SUM(amount) AS total
@@ -216,8 +261,6 @@ foreach($employees as $empid => $emp){
             AND date_advance BETWEEN '$from' AND '$to'
         ")->fetch_assoc()['total'] ?? 0
     );
-
-    /* PERSONAL DEDUCTIONS */
 
     $pd_query = $conn->query("
         SELECT description, amount
@@ -229,18 +272,11 @@ foreach($employees as $empid => $emp){
     $pd_total = 0;
 
     while($pd = $pd_query->fetch_assoc()){
-
         $pd_items[] = $pd;
         $pd_total += $pd['amount'];
     }
 
-    /* COLA */
-
-    $cola_value = ($cola_enabled == 1)
-        ? $cola_amount
-        : 0;
-
-    /* TOTALS */
+    $cola_value = ($cola_enabled == 1) ? $cola_amount : 0;
 
     $gross = $regular + $ot + $hp + $cola_value;
 
@@ -251,35 +287,25 @@ foreach($employees as $empid => $emp){
 
     $net = $gross - $total_deduction;
 
-    /* SAVE */
-
     $payroll_rows[] = [
 
-        'empid' => $empid,
+        'empid'    => $empid,
+        'emp'      => $emp,
 
-        'emp' => $emp,
-
-        'regular' => $regular,
-
-        'ot' => $ot,
-
-        'hp' => $hp,
-
+        'regular'  => $regular,
+        'ot'       => $ot,
+        'hp'       => $hp,
         'cola_value' => $cola_value,
 
-        'gross' => $gross,
+        'gross'    => $gross,
 
-        'global_ded' => $global_deductions,
-
-        'pd_items' => $pd_items,
-
-        'pd_total' => $pd_total,
-
-        'ca' => $ca,
+        'global_ded'      => $global_deductions,
+        'pd_items'        => $pd_items,
+        'pd_total'        => $pd_total,
+        'ca'              => $ca,
 
         'total_deduction' => $total_deduction,
-
-        'net' => $net
+        'net'             => $net
     ];
 }
 ?>
