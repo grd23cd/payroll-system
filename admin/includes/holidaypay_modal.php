@@ -43,9 +43,13 @@
             <input type="number" step="0.01" name="rate" class="form-control" placeholder="Rate" required>
           </div>
 
+          <!-- DROPDOWN -->
           <div class="form-group">
             <label>Percentage (%)</label>
-            <input type="number" step="0.01" name="percentage" class="form-control" placeholder="e.g. 130" required>
+            <select name="percentage" class="form-control" required>
+              <option value="30">30%</option>
+              <option value="200">200%</option>
+            </select>
           </div>
 
         </div>
@@ -58,6 +62,7 @@
     </form>
   </div>
 </div>
+
 
 <div class="modal fade" id="edit">
   <div class="modal-dialog">
@@ -92,9 +97,13 @@
             <input type="number" step="0.01" id="rate_edit" name="rate" class="form-control">
           </div>
 
+          <!-- DROPDOWN -->
           <div class="form-group">
             <label>Percentage (%)</label>
-            <input type="number" step="0.01" id="percentage_edit" name="percentage" class="form-control">
+            <select id="percentage_edit" name="percentage" class="form-control" required>
+              <option value="30">30%</option>
+              <option value="200">200%</option>
+            </select>
           </div>
 
         </div>
@@ -107,6 +116,7 @@
     </form>
   </div>
 </div>
+
 
 <div class="modal fade" id="delete">
   <div class="modal-dialog">
