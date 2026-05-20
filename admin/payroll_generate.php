@@ -388,14 +388,6 @@ foreach ($rows as $r) {
     $sheet->setCellValue("C{$rowStart}", $r['regular']);
     money($sheet, "C{$rowStart}");
     right($sheet, "C{$rowStart}");
-    if ($rowStart + 1 <= $rowEnd) {
-        $sheet->setCellValue("C" . ($rowStart + 1), 'Rate: ' . number_format($emp['rate'], 2));
-        $sheet->getStyle("C" . ($rowStart + 1))->getFont()->setSize(8)->setItalic(true);
-    }
-    if ($rowStart + 2 <= $rowEnd) {
-        $sheet->setCellValue("C" . ($rowStart + 2), 'Hours: ' . number_format($emp['total_hr'], 2));
-        $sheet->getStyle("C" . ($rowStart + 2))->getFont()->setSize(8)->setItalic(true);
-    }
 
     /* Addons (OT / Holiday / COLA) */
     $addons = 0;

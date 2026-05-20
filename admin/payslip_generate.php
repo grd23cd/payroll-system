@@ -218,16 +218,6 @@ foreach($employees as $empid => $emp){
     <br>
 
     <tr>
-        <td>Rate / Hour:</td>
-        <td>'.number_format($emp['rate'],2).'</td>
-    </tr>
-
-    <tr>
-        <td>Total Hours:</td>
-        <td>'.number_format($emp['total_hr'],2).'</td>
-    </tr>
-
-    <tr>
         <td>Regular Pay:</td>
         <td>'.number_format($regular,2).'</td>
     </tr>';
