@@ -5,8 +5,12 @@ if(isset($_POST['add'])){
     $employee = $_POST['employee'];
     $date = $_POST['date'];
 
-    $time_in = date('H:i:s', strtotime($_POST['time_in']));
-    $time_out = date('H:i:s', strtotime($_POST['time_out']));
+    // KEEP RAW TIME FIRST
+    $raw_time_in = $_POST['time_in'];
+    $raw_time_out = $_POST['time_out'];
+
+    $time_in = date('H:i:s', strtotime($raw_time_in));
+    $time_out = date('H:i:s', strtotime($raw_time_out));
 
     $sql = "SELECT * FROM employees WHERE employee_id = '$employee'";
     $query = $conn->query($sql);
@@ -32,7 +36,15 @@ if(isset($_POST['add'])){
             $squery = $conn->query($sql);
             $scherow = $squery->fetch_assoc();
 
-            $logstatus = ($time_in > $scherow['time_in']) ? 0 : 1;
+            // ===============================
+            // GRACE PERIOD LOGIC
+            // ===============================
+            $sched_time_in = new DateTime($date . ' ' . $scherow['time_in']);
+            $actual_time_in = new DateTime($date . ' ' . $time_in);
+
+            $late_minutes = ($actual_time_in->getTimestamp() - $sched_time_in->getTimestamp()) / 60;
+
+            $logstatus = ($late_minutes <= 15) ? 1 : 0;
 
             $sql = "INSERT INTO attendance 
                     (employee_id, date, time_in, time_out, status) 
@@ -42,31 +54,29 @@ if(isset($_POST['add'])){
                 $_SESSION['success'] = 'Attendance added successfully';
                 $id = $conn->insert_id;
 
+                // GET SCHEDULE (DO NOT TOUCH TIME-IN)
                 $sql = "SELECT * FROM employees 
                         LEFT JOIN schedules ON schedules.id=employees.schedule_id 
                         WHERE employees.id = '$emp'";
                 $query = $conn->query($sql);
                 $srow = $query->fetch_assoc();
 
-                if($srow['time_in'] > $time_in){
-                    $time_in = $srow['time_in'];
-                }
+                // ONLY USE SCHEDULE FOR COMPARISON, NOT OVERWRITE
+                $sched_in = $srow['time_in'];
+                $sched_out = $srow['time_out'];
 
-                if($srow['time_out'] < $time_out){
-                    $time_out = $srow['time_out'];
-                }
+                // COMPUTE HOURS USING ACTUAL INPUT
+                $time_in_obj = new DateTime($date . ' ' . $time_in);
+                $time_out_obj = new DateTime($date . ' ' . $time_out);
 
-                $time_in = new DateTime($time_in);
-                $time_out = new DateTime($time_out);
-
-                $interval = $time_in->diff($time_out);
+                $interval = $time_in_obj->diff($time_out_obj);
                 $int = $interval->h + ($interval->i / 60);
 
-                // lunch deduction 
-                $lunch_start = new DateTime('12:00:00');
-                $lunch_end = new DateTime('13:00:00');
+                // lunch deduction
+                $lunch_start = new DateTime($date . ' 12:00:00');
+                $lunch_end = new DateTime($date . ' 13:00:00');
 
-                if($time_in < $lunch_start && $time_out > $lunch_end){
+                if($time_in_obj < $lunch_start && $time_out_obj > $lunch_end){
                     $int -= 1;
                 }
 

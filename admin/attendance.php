@@ -16,18 +16,23 @@
     </section>
 
     <section class="content">
+
       <?php
         if(isset($_SESSION['error'])){
           echo "<div class='alert alert-danger alert-dismissible'>
-                  <button type='button' class='close' data-dismiss='alert' aria-hidden='true'>&times;</button>
-                  <h4><i class='icon fa fa-warning'></i> Error!</h4>".$_SESSION['error']."</div>";
+                  <button type='button' class='close' data-dismiss='alert'>&times;</button>
+                  <h4><i class='icon fa fa-warning'></i> Error!</h4>
+                  ".$_SESSION['error']."
+                </div>";
           unset($_SESSION['error']);
         }
 
         if(isset($_SESSION['success'])){
           echo "<div class='alert alert-success alert-dismissible'>
-                  <button type='button' class='close' data-dismiss='alert' aria-hidden='true'>&times;</button>
-                  <h4><i class='icon fa fa-check'></i> Success!</h4>".$_SESSION['success']."</div>";
+                  <button type='button' class='close' data-dismiss='alert'>&times;</button>
+                  <h4><i class='icon fa fa-check'></i> Success!</h4>
+                  ".$_SESSION['success']."
+                </div>";
           unset($_SESSION['success']);
         }
       ?>
@@ -45,7 +50,6 @@
             <div class="box-body">
               <table id="example1" class="table table-bordered">
                 <thead>
-                  <th class="hidden"></th>
                   <th>Date</th>
                   <th>Employee ID</th>
                   <th>Name</th>
@@ -58,15 +62,24 @@
                   <?php
 
                     $sql = "
-                      SELECT *,
-                      employees.employee_id AS empid,
-                      attendance.id AS attid,
-                      attendance.time_out AS actual_time_out,
-                      schedules.time_out AS schedule_time_out
+                      SELECT 
+                        attendance.id AS attid,
+                        attendance.date,
+                        attendance.time_in AS att_time_in,
+                        attendance.time_out AS att_time_out,
+                        attendance.status,
+
+                        employees.employee_id AS empid,
+                        employees.firstname,
+                        employees.lastname,
+
+                        schedules.time_out AS schedule_time_out
+
                       FROM attendance
                       LEFT JOIN employees ON employees.id = attendance.employee_id
                       LEFT JOIN schedules ON schedules.id = employees.schedule_id
-                      ORDER BY attendance.date DESC, attendance.time_in DESC
+
+                      ORDER BY STR_TO_DATE(attendance.date, '%Y-%m-%d') DESC, attendance.time_in DESC
                     ";
 
                     $query = $conn->query($sql);
@@ -82,55 +95,54 @@
                       $date = $row['date'];
                       $isSaturday = (date('N', strtotime($date)) == 6);
 
-                      $time_in = strtotime($row['time_in']);
-                      $time_out = strtotime($row['actual_time_out']);
+                      $time_in = strtotime($row['att_time_in']);
+                      $time_out = strtotime($row['att_time_out']);
 
                       if($isSaturday){
 
-                        if(!empty($row['time_in']) && !empty($row['actual_time_out'])){
+                        if(!empty($row['att_time_in']) && !empty($row['att_time_out'])){
 
                           $worked_hours = ($time_out - $time_in) / 3600;
 
                           if($worked_hours < 3){
                             $undertime = '<span class="label label-info pull-right" style="margin-right:5px;">undertime</span>';
                           }
-
                         }
 
                       } else {
 
-                        if(
-                          !empty($row['actual_time_out']) &&
-                          !empty($row['schedule_time_out'])
-                        ){
+                        if(!empty($row['att_time_out']) && !empty($row['schedule_time_out'])){
 
-                          $actual_out = strtotime($row['actual_time_out']);
+                          $actual_out = strtotime($row['att_time_out']);
                           $required_out = strtotime($row['schedule_time_out']);
 
                           if($actual_out < $required_out){
                             $undertime = '<span class="label label-info pull-right" style="margin-right:5px;">undertime</span>';
                           }
-
                         }
-
                       }
 
                       echo "
                         <tr>
-                          <td class='hidden'></td>
-                          <td>".date('M d, Y', strtotime($row['date']))."</td>
+                          <td data-order='".date('Y-m-d', strtotime($row['date']))."'>
+                            ".date('M d, Y', strtotime($row['date']))."
+                          </td>
                           <td>".$row['empid']."</td>
                           <td>".$row['firstname'].' '.$row['lastname']."</td>
+
                           <td>
-                            ".date('h:i A', strtotime($row['time_in']))."
+                            ".date('h:i A', strtotime($row['att_time_in']))."
                             ".$status."
                             ".$undertime."
                           </td>
-                          <td>".date('h:i A', strtotime($row['actual_time_out']))."</td>
+
+                          <td>".date('h:i A', strtotime($row['att_time_out']))."</td>
+
                           <td>
                             <button class='btn btn-success btn-sm btn-flat edit' data-id='".$row['attid']."'>
                               <i class='fa fa-edit'></i> Edit
                             </button>
+
                             <button class='btn btn-danger btn-sm btn-flat delete' data-id='".$row['attid']."'>
                               <i class='fa fa-trash'></i> Delete
                             </button>
@@ -138,7 +150,6 @@
                         </tr>
                       ";
                     }
-
                   ?>
                 </tbody>
               </table>
@@ -157,6 +168,7 @@
 </div>
 
 <?php include 'includes/scripts.php'; ?>
+<?php include 'includes/datatable_initializer.php'; ?>
 
 <script>
 $(function(){
@@ -164,15 +176,13 @@ $(function(){
   $('.edit').click(function(e){
     e.preventDefault();
     $('#edit').modal('show');
-    var id = $(this).data('id');
-    getRow(id);
+    getRow($(this).data('id'));
   });
 
   $('.delete').click(function(e){
     e.preventDefault();
     $('#delete').modal('show');
-    var id = $(this).data('id');
-    getRow(id);
+    getRow($(this).data('id'));
   });
 
 });
@@ -186,10 +196,13 @@ function getRow(id){
     success: function(response){
       $('#datepicker_edit').val(response.date);
       $('#attendance_date').html(response.date);
+
       $('#edit_time_in').val(response.time_in);
       $('#edit_time_out').val(response.time_out);
+
       $('#attid').val(response.attid);
       $('#employee_name').html(response.firstname + ' ' + response.lastname);
+
       $('#del_attid').val(response.attid);
       $('#del_employee_name').html(response.firstname + ' ' + response.lastname);
     }
@@ -197,6 +210,5 @@ function getRow(id){
 }
 </script>
 
-<?php include 'includes/datatable_initializer.php'; ?>
 </body>
 </html>
