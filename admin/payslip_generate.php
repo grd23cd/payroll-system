@@ -44,7 +44,9 @@ $pdf->SetFont('helvetica', '', 11);
 
 $logo = dirname(__FILE__) . '/../images/logo.jpg';
 
-/* ATTENDANCE */
+/* =========================
+   ATTENDANCE QUERY
+========================= */
 $sql = "SELECT attendance.*,
                employees.id AS empid,
                employees.employee_id AS emp_code,
@@ -58,11 +60,17 @@ $sql = "SELECT attendance.*,
 
 $query = $conn->query($sql);
 
+/* =========================
+   STEP 1: COLLECT RAW DATA PER DAY
+========================= */
 $employees = [];
+$daily = [];
 
+/* STEP 1: COLLECT RAW HOURS PER DAY */
 while($row = $query->fetch_assoc()){
 
     $empid = $row['empid'];
+    $date = $row['date'];
 
     if(!isset($employees[$empid])){
         $employees[$empid] = [
@@ -74,18 +82,68 @@ while($row = $query->fetch_assoc()){
         ];
     }
 
-    $hours = $row['num_hr'];
-    $day = date('l', strtotime($row['date']));
-
-    if($day == 'Saturday'){
-        $hours = ($hours / 3) * 8;
-        if($hours > 8) $hours = 8;
+    if(!isset($daily[$empid])){
+        $daily[$empid] = [];
     }
 
-    $employees[$empid]['total_hr'] += $hours;
+    if(!isset($daily[$empid][$date])){
+        $daily[$empid][$date] = 0;
+    }
+
+    $daily[$empid][$date] += floatval($row['num_hr']);
 }
 
-/* LOOP EMPLOYEES */
+/* STEP 2: APPLY 3:8 RATIO CORRECTLY PER DAY */
+foreach($daily as $empid => $dates){
+
+    foreach($dates as $date => $hours){
+
+        $day = date('l', strtotime($date));
+
+        if($hours > 8){
+            $hours = 8;
+        }
+
+        if($day == 'Saturday'){
+
+            if($hours > 0 && $hours <= 3){
+                $hours = 8;
+            } else {
+                $hours = ($hours / 3) * 8;
+                if($hours > 8){
+                    $hours = 8;
+                }
+            }
+        }
+
+        $employees[$empid]['total_hr'] += $hours;
+    }
+}
+
+/* =========================
+   STEP 2: APPLY SATURDAY 3:8 RATIO PER DAY
+========================= */
+foreach($daily_hours as $empid => $dates){
+
+    foreach($dates as $date => $hours){
+
+        $day = date('l', strtotime($date));
+
+        if($day == 'Saturday'){
+            $hours = $hours * (8 / 3);
+
+            if($hours > 8){
+                $hours = 8;
+            }
+        }
+
+        $employees[$empid]['total_hr'] += $hours;
+    }
+}
+
+/* =========================
+   PDF GENERATION
+========================= */
 foreach($employees as $empid => $emp){
 
     $pdf->AddPage();
@@ -93,10 +151,6 @@ foreach($employees as $empid => $emp){
     if(file_exists($logo)){
         $pdf->Image($logo, 35, 10, 25, 25);
     }
-
-    /* =========================
-       PERFECT CENTER HEADER
-    ========================= */
 
     $pdf->SetY(15);
 

@@ -48,23 +48,81 @@ $sql = "SELECT attendance.*,
 $query     = $conn->query($sql);
 $employees = [];
 
+/* ── ATTENDANCE → group by employee (FIXED SATURDAY LOGIC) ─────── */
+$sql = "SELECT attendance.*,
+               employees.id          AS empid,
+               employees.employee_id AS emp_code,
+               employees.firstname,
+               employees.lastname,
+               position.rate
+        FROM attendance
+        LEFT JOIN employees ON employees.id = attendance.employee_id
+        LEFT JOIN position  ON position.id  = employees.position_id
+        WHERE attendance.date BETWEEN '$from' AND '$to'";
+
+$query = $conn->query($sql);
+
+$employees = [];
+$daily = [];
+
+/* =========================
+   STEP 1: GROUP PER DAY
+========================= */
 while ($row = $query->fetch_assoc()) {
+
     $empid = $row['empid'];
+    $date  = $row['date'];
+
     if (!isset($employees[$empid])) {
         $employees[$empid] = [
-            'firstname'   => $row['firstname'],
-            'lastname'    => $row['lastname'],
-            'emp_code'    => $row['emp_code'],
-            'rate'        => $row['rate'],
-            'total_hr'    => 0,
+            'firstname' => $row['firstname'],
+            'lastname'  => $row['lastname'],
+            'emp_code'  => $row['emp_code'],
+            'rate'      => $row['rate'],
+            'total_hr'  => 0,
         ];
     }
-    $hours = $row['num_hr'];
-    if (date('l', strtotime($row['date'])) === 'Saturday') {
-        $hours = ($hours / 3) * 8;
-        if ($hours > 8) $hours = 8;
+
+    if (!isset($daily[$empid][$date])) {
+        $daily[$empid][$date] = 0;
     }
-    $employees[$empid]['total_hr'] += $hours;
+
+    $daily[$empid][$date] += (float)$row['num_hr'];
+}
+
+/* =========================
+   STEP 2: APPLY RULES
+========================= */
+foreach ($daily as $empid => $dates) {
+
+    foreach ($dates as $date => $hours) {
+
+        $day = date('l', strtotime($date));
+
+        // cap normal days
+        if ($hours > 8) {
+            $hours = 8;
+        }
+
+        /* =========================
+           SATURDAY 3:8 RULE
+        ========================= */
+        if ($day === 'Saturday') {
+
+            if ($hours > 0) {
+
+                // proportional scaling
+                $hours = ($hours / 3) * 8;
+
+                // safety cap
+                if ($hours > 8) {
+                    $hours = 8;
+                }
+            }
+        }
+
+        $employees[$empid]['total_hr'] += $hours;
+    }
 }
 
 uasort($employees, function ($a, $b) {
