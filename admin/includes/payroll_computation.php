@@ -187,7 +187,19 @@ foreach($employees as $empid => $emp){
 
     $hp = (float)(
         $conn->query("
-            SELECT SUM(hours * rate * (percentage/100)) AS total
+            SELECT SUM(
+                hours * rate *
+                (
+                    CASE
+                        /* BELOW 100 = DIRECT EXTRA % */
+                        WHEN percentage < 100
+                            THEN (percentage / 100)
+
+                        /* 100 OR HIGHER = ONLY EXCESS ABOVE 100 */
+                        ELSE ((percentage - 100) / 100)
+                    END
+                )
+            ) AS total
             FROM holiday_pay
             WHERE employee_id='$empid'
             AND date_holiday BETWEEN '$from' AND '$to'
