@@ -50,7 +50,8 @@ $sql = "
            employees.employee_id AS emp_code,
            employees.firstname,
            employees.lastname,
-           position.rate
+           position.rate,
+           position.description AS position_name
 
     FROM attendance
 
@@ -80,11 +81,12 @@ while($row = $query->fetch_assoc()){
 
     if(!isset($employees[$empid])){
         $employees[$empid] = [
-            'firstname' => $row['firstname'],
-            'lastname'  => $row['lastname'],
-            'emp_code'  => $row['emp_code'],
-            'rate'      => $row['rate'],
-            'total_hr'  => 0
+            'firstname'     => $row['firstname'],
+            'lastname'      => $row['lastname'],
+            'emp_code'      => $row['emp_code'],
+            'rate'          => $row['rate'],
+            'position_name' => $row['position_name'],
+            'total_hr'      => 0
         ];
     }
 

@@ -1,6 +1,3 @@
-# payslip_generate.php
-
-```php
 <?php
 include 'includes/session.php';
 
@@ -39,6 +36,7 @@ $logo = dirname(__FILE__) . '/../images/logo.jpg';
 foreach($payroll_rows as $row){
 
     $emp = $row['emp'];
+    $position = $emp['position_name'] ?? 'N/A';
 
     $pdf->AddPage();
 
@@ -62,6 +60,11 @@ foreach($payroll_rows as $row){
     <tr>
         <td width="30%"><b>Employee Name:</b></td>
         <td width="70%">'.$emp['firstname'].' '.$emp['lastname'].'</td>
+    </tr>
+
+    <tr>
+        <td><b>Position:</b></td>
+        <td>'.$position.'</td>
     </tr>
 
     <tr>
@@ -156,4 +159,3 @@ if(ob_get_length()){
 
 $pdf->Output('payslip.pdf', 'I');
 ?>
-```

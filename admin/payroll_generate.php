@@ -226,8 +226,9 @@ $grandNet   = 0;
 
 foreach ($rows as $r) {
 
-    $emp  = $r['emp'];
-    $name = strtoupper($emp['lastname'].', '.$emp['firstname']);
+    $emp      = $r['emp'];
+    $name     = strtoupper($emp['lastname'].', '.$emp['firstname']);
+    $position = strtoupper($emp['position_name'] ?? 'N/A');  // Get position
 
     $all_ded_values = [];
 
@@ -268,6 +269,13 @@ foreach ($rows as $r) {
 
     $sheet->mergeCells("A{$rowStart}:A{$rowEnd}");
     $sheet->setCellValue("A{$rowStart}", $name);
+    center($sheet, "A{$rowStart}:A{$rowEnd}");
+
+    /* DESIGNATION — populated with position_name */
+
+    $sheet->mergeCells("B{$rowStart}:B{$rowEnd}");
+    $sheet->setCellValue("B{$rowStart}", $position);
+    center($sheet, "B{$rowStart}:B{$rowEnd}");
 
     /* REGULAR */
 

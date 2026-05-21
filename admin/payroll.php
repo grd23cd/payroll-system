@@ -53,6 +53,7 @@ $range_from = date('m/d/Y', strtotime('-30 day', strtotime($range_to)));
 <table id="example1" class="table table-bordered">
 <thead>
   <th>Employee Name</th>
+  <th>Position</th>
   <th>Employee ID</th>
   <th>Gross</th>
   <th>Deductions</th>
@@ -78,10 +79,12 @@ include 'includes/payroll_computation.php';
 foreach($payroll_rows as $row){
 
     $emp = $row['emp'];
+    $position = $emp['position_name'] ?? 'N/A';
 
     echo "
     <tr>
       <td>{$emp['lastname']}, {$emp['firstname']}</td>
+      <td>{$position}</td>
       <td>{$emp['emp_code']}</td>
       <td>".number_format($row['gross'],2)."</td>
       <td>".number_format($row['total_deduction'],2)."</td>
